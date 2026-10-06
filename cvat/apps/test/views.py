@@ -3,12 +3,19 @@
 # SPDX-License-Identifier: MIT
 
 from django.db.models import Count
+from django.template.response import TemplateResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from cvat.apps.engine.models import Job, Label, LabeledShape, Task
+
+
+def annotation_counts_page(request):
+    """Serve the annotation analytics HTML page."""
+    task_id = request.GET.get("task_id", "3")
+    return TemplateResponse(request, "annotation_counts.html", {"task_id": task_id})
 
 
 @api_view(["GET"])

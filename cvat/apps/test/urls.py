@@ -12,4 +12,9 @@ urlpatterns = [
         views.annotation_counts,
         name="annotation-counts",
     ),
+    path(
+        "analytics/annotation-counts",
+        views.annotation_counts_page,
+        name="annotation-counts-page",
+    ),
 ]
