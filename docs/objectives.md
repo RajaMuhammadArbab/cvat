@@ -1,0 +1,23 @@
+# Objectives
+
+| ID | Field | Entry |
+|---|---|---|
+| MO-1 | What is measured | API response time for annotation counts per class |
+| | How | Browser Network panel, Timing tab, GET request duration |
+| | Target | Median of 5 runs at or below 400ms |
+| | Conditions | Chrome, cache disabled, local Docker, COCO val2017 loaded |
+
+## Results
+- Run 1: ...
+- Run 2: ...
+- Run 3: ...
+- Run 4: ...
+- Run 5: ...
+- Median: ...
+- Spread: ...
+
+## Environment
+- CPU: Intel Core i5-6300U @ 2.40GHz (4 CPUs)
+- RAM: 8 GB (8192 MB)
+- OS: Windows 10 Pro 64-bit (Build 19045)
+- CVAT SHA: c4f0c2a54dd7d95bc222836c645e8c290858fd05
