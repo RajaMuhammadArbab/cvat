@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Annotation Counts — Task Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      padding: 24px;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 20px; }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .controls label { font-weight: 600; font-size: 0.9rem; }
+    .controls input {
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      width: 80px;
+    }
+    .btn {
+      background: #1890ff;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 18px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #096dd9; }
+    #status {
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      min-height: 20px;
+    }
+    #status.error { color: #cf1322; }
+    #status.loading { color: #1890ff; }
+    #status.success { color: #389e0d; }
+    #empty {
+      display: none;
+      text-align: center;
+      padding: 60px 0;
+      color: #999;
+      font-size: 1.1rem;
+    }
+    #chartContainer { position: relative; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📊 Annotation Counts per Class</h1>
+    <p class="subtitle">Shows how many annotated shapes exist per label in a CVAT task.</p>
+
+    <div class="controls">
+      <label for="taskId">Task ID:</label>
+      <input type="number" id="taskId" value="3" min="1" />
+      <label for="topN">Show top:</label>
+      <input type="number" id="topN" value="20" min="1" max="80" />
+      <button class="btn" onclick="loadData()">Load</button>
+    </div>
+
+    <div id="status" class="loading">Loading…</div>
+    <div id="empty">No annotations found for this task.</div>
+    <div id="chartContainer">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let chartInstance = null;
+
+    async function loadData() {
+      const taskId = document.getElementById("taskId").value.trim();
+      const topN   = parseInt(document.getElementById("topN").value) || 20;
+      const status = document.getElementById("status");
+      const empty  = document.getElementById("empty");
+
+      if (!taskId) {
+        setStatus("Please enter a Task ID.", "error");
+        return;
+      }
+
+      setStatus("Loading…", "loading");
+      empty.style.display = "none";
+      destroyChart();
+
+      let data;
+      try {
+        const resp = await fetch(`/api/tasks/${taskId}/annotation-counts`, {
+          headers: { "Accept": "application/vnd.cvat+json, application/json, */*" },
+          credentials: "same-origin",
+        });
+
+        if (resp.status === 401 || resp.status === 403) {
+          setStatus(
+            `Access denied (${resp.status}). Please log in to CVAT first and make sure you have access to Task ${taskId}.`,
+            "error"
+          );
+          return;
+        }
+        if (resp.status === 404) {
+          setStatus(`Task ${taskId} not found.`, "error");
+          return;
+        }
+        if (!resp.ok) {
+          setStatus(`Server error: ${resp.status} ${resp.statusText}`, "error");
+          return;
+        }
+
+        data = await resp.json();
+      } catch (err) {
+        setStatus(`Request failed: ${err.message}. Is CVAT running?`, "error");
+        return;
+      }
+
+      const counts = data.annotation_counts || [];
+      if (counts.length === 0) {
+        setStatus(`Task "${data.task_name}" loaded.`, "success");
+        empty.style.display = "block";
+        return;
+      }
+
+      // Apply top-N filter
+      const slice  = counts.slice(0, topN);
+      const labels = slice.map(r => r.label);
+      const values = slice.map(r => r.count);
+
+      setStatus(
+        `Task #${data.task_id} — "${data.task_name}" | ${counts.length} labels total, showing top ${slice.length}.`,
+        "success"
+      );
+
+      renderChart(labels, values);
+    }
+
+    function renderChart(labels, values) {
+      destroyChart();
+      const ctx = document.getElementById("chart").getContext("2d");
+      chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Annotation count",
+            data: values,
+            backgroundColor: "rgba(24, 144, 255, 0.75)",
+            borderColor: "rgba(24, 144, 255, 1)",
+            borderWidth: 1,
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${ctx.parsed.y.toLocaleString()} shapes`,
+              },
+            },
+          },
+          scales: {
+            x: { ticks: { maxRotation: 45, minRotation: 30 } },
+            y: {
+              beginAtZero: true,
+              ticks: { callback: v => v.toLocaleString() },
+            },
+          },
+        },
+      });
+    }
+
+    function destroyChart() {
+      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    }
+
+    function setStatus(msg, cls) {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.className = cls;
+    }
+
+    // Load on page open
+    loadData();
+  </script>
+</body>
+</html>
