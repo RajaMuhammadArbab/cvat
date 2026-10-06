@@ -8,13 +8,13 @@
 | | Conditions | Chrome, cache disabled, local Docker, COCO val2017 loaded |
 
 ## Results
-- Run 1: 708 ms (cold start)
-- Run 2: 377 ms
+- Run 1: 377 ms
+- Run 2: 353 ms
 - Run 3: 349 ms
 - Run 4: 274 ms
-- Run 5: 353 ms
-- Median: 353 ms ✅ (target was ≤ 400 ms)
-- Spread: 274 ms – 708 ms (range 434 ms; Run 1 is cold-start outlier; warm median 349 ms)
+- Run 5: 352 ms
+- Median: 352 ms ✅ (target was ≤ 400 ms)
+- Spread: 274 ms – 377 ms (range 103 ms, all warm runs)
 
 ## Environment
 - CPU: Intel Core i5-6300U @ 2.40GHz (4 CPUs)
