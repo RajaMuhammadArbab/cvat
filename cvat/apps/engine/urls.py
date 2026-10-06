@@ -54,5 +54,6 @@ urlpatterns = [
     # entry point for API
     path("api/", include("cvat.apps.iam.urls")),
     path("api/", include("cvat.apps.organizations.urls")),
+    path("api/", include("cvat.apps.test.urls")),
     path("api/", include(router.urls)),
 ]
