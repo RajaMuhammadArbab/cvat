@@ -108,7 +108,7 @@
       let data;
       try {
         const resp = await fetch(`/api/tasks/${taskId}/annotation-counts`, {
-          headers: { "Accept": "application/json" },
+          headers: { "Accept": "application/vnd.cvat+json, application/json, */*" },
           credentials: "same-origin",
         });
 

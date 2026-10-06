@@ -3,13 +3,11 @@
 # SPDX-License-Identifier: MIT
 
 from django.db.models import Count
+from django.http import JsonResponse
 from django.template.response import TemplateResponse
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
+from django.views.decorators.http import require_http_methods
 
-from cvat.apps.engine.models import Job, Label, LabeledShape, Task
+from cvat.apps.engine.models import Job, LabeledShape, Task
 
 
 def annotation_counts_page(request):
@@ -18,8 +16,7 @@ def annotation_counts_page(request):
     return TemplateResponse(request, "annotation_counts.html", {"task_id": task_id})
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@require_http_methods(["GET"])
 def annotation_counts(request, task_id):
     """
     Return annotation count per class label for the given task.
@@ -34,13 +31,20 @@ def annotation_counts(request, task_id):
     Path: Task -> Job -> LabeledShape.label -> Label.name
     """
 
+    # --- authentication check ---
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"detail": "Authentication credentials were not provided."},
+            status=401,
+        )
+
     # --- permission check: does the task exist and can this user see it? ---
     try:
         task = Task.objects.get(pk=task_id)
     except Task.DoesNotExist:
-        return Response(
+        return JsonResponse(
             {"detail": f"Task {task_id} not found."},
-            status=status.HTTP_404_NOT_FOUND,
+            status=404,
         )
 
     # Check that at least one job in this task is accessible to the user.
@@ -49,9 +53,9 @@ def annotation_counts(request, task_id):
     if not request.user.is_superuser:
         jobs = jobs.filter(assignee=request.user)
         if not jobs.exists():
-            return Response(
+            return JsonResponse(
                 {"detail": "You do not have access to this task."},
-                status=status.HTTP_403_FORBIDDEN,
+                status=403,
             )
 
     # --- count shapes per label for this task ---
@@ -68,7 +72,7 @@ def annotation_counts(request, task_id):
         for row in counts
     ]
 
-    return Response(
+    return JsonResponse(
         {
             "task_id": task_id,
             "task_name": task.name,
